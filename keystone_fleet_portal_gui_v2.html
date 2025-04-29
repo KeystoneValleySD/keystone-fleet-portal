@@ -1,0 +1,250 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Keystone Valley School District | Fleet Portal</title>
+  <style>
+    :root {
+      --primary-color: #0047AB; /* Blue */
+      --accent-color: #C8102E;  /* Red */
+    }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background: #f4f4f4;
+    }
+    header {
+      background: var(--primary-color);
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    nav {
+      display: flex;
+      background: var(--accent-color);
+      justify-content: space-around;
+      padding: 10px;
+    }
+    nav button {
+      background: white;
+      color: var(--accent-color);
+      border: none;
+      padding: 10px 20px;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    nav button:hover {
+      background: #ffe6e6;
+    }
+    .section {
+      display: none;
+      padding: 20px;
+    }
+    .visible {
+      display: block;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .btn {
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .btn:hover {
+      background: #003187;
+    }
+    h2 {
+      color: var(--accent-color);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Keystone Valley School District</h1>
+  <p>Fleet Management Portal</p>
+</header>
+
+<nav>
+  <button onclick="showSection('dashboard')">Dashboard</button>
+  <button onclick="showSection('driver')">Driver Portal</button>
+  <button onclick="showSection('admin')">Admin Tools</button>
+</nav>
+
+<div id="dashboard" class="section visible">
+  <div class="card">
+    <h2>Welcome</h2>
+    <p>This is the central fleet system for Keystone Valley School District. Use the tabs above to access the driver portal or admin controls.</p>
+  </div>
+</div>
+
+<div id="driver" class="section">
+  <div class="card">
+    <h2>Driver Login</h2>
+    <label>Select Your Name/ID:</label>
+    <select id="driverSelect"></select>
+
+    <label>Select Your Bus:</label>
+    <select id="busSelect"></select>
+
+    <label>Select Your Route:</label>
+    <select id="routeSelect"></select>
+
+    <button class="btn" onclick="startTrip()">Start Trip</button>
+    <button class="btn" onclick="endTrip()">End Trip</button>
+
+    <p id="tripInfo"></p>
+  </div>
+
+  <div class="card">
+    <h2>Pre-Trip Inspection</h2>
+    <div id="checklistArea"></div>
+  </div>
+</div>
+
+<div id="admin" class="section">
+  <div class="card">
+    <h2>Add Driver</h2>
+    <input type="text" id="newDriver" placeholder="Driver Name and ID">
+    <button class="btn" onclick="addDriver()">Add Driver</button>
+  </div>
+
+  <div class="card">
+    <h2>Add Bus</h2>
+    <input type="text" id="newBus" placeholder="Bus Number (e.g., 60)">
+    <button class="btn" onclick="addBus()">Add Bus</button>
+  </div>
+
+  <div class="card">
+    <h2>Add Route</h2>
+    <input type="text" id="routeName" placeholder="Route Name or School">
+    <textarea id="routeStops" rows="4" placeholder="Stop List with Times (one per line)"></textarea>
+    <button class="btn" onclick="addRoute()">Add Route</button>
+  </div>
+
+  <div class="card">
+    <h2>Customize Pre-Trip Inspection</h2>
+    <textarea id="inspectionTasks" rows="5" placeholder="Enter inspection tasks, one per line"></textarea>
+    <button class="btn" onclick="saveChecklist()">Save Checklist</button>
+  </div>
+</div>
+
+<script>
+  let startTime = null;
+
+  function showSection(id) {
+    document.querySelectorAll('.section').forEach(sec => sec.classList.remove('visible'));
+    document.getElementById(id).classList.add('visible');
+    if (id === 'driver') loadDriverData();
+  }
+
+  function addDriver() {
+    const name = document.getElementById('newDriver').value.trim();
+    if (!name) return alert('Enter a driver name.');
+    const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
+    if (!drivers.includes(name)) {
+      drivers.push(name);
+      localStorage.setItem('drivers', JSON.stringify(drivers));
+      alert('Driver added.');
+    }
+    document.getElementById('newDriver').value = '';
+  }
+
+  function addBus() {
+    const bus = document.getElementById('newBus').value.trim();
+    if (!bus) return alert('Enter a bus number.');
+    const buses = JSON.parse(localStorage.getItem('buses') || '[]');
+    if (!buses.includes(bus)) {
+      buses.push(bus);
+      localStorage.setItem('buses', JSON.stringify(buses));
+      alert('Bus added.');
+    }
+    document.getElementById('newBus').value = '';
+  }
+
+  function addRoute() {
+    const name = document.getElementById('routeName').value.trim();
+    const stops = document.getElementById('routeStops').value.trim().split('\n').filter(x => x);
+    if (!name || stops.length === 0) return alert('Enter route name and stops.');
+    const routes = JSON.parse(localStorage.getItem('routes') || '[]');
+    routes.push({ name, stops });
+    localStorage.setItem('routes', JSON.stringify(routes));
+    alert('Route added.');
+    document.getElementById('routeName').value = '';
+    document.getElementById('routeStops').value = '';
+  }
+
+  function saveChecklist() {
+    const tasks = document.getElementById('inspectionTasks').value.trim().split('\n').filter(x => x);
+    localStorage.setItem('inspectionChecklist', JSON.stringify(tasks));
+    alert('Checklist updated.');
+  }
+
+  function loadDriverData() {
+    const driverSel = document.getElementById('driverSelect');
+    const busSel = document.getElementById('busSelect');
+    const routeSel = document.getElementById('routeSelect');
+    driverSel.innerHTML = busSel.innerHTML = routeSel.innerHTML = '';
+
+    JSON.parse(localStorage.getItem('drivers') || '[]').forEach(d => {
+      const opt = document.createElement('option');
+      opt.text = d; opt.value = d;
+      driverSel.add(opt);
+    });
+
+    JSON.parse(localStorage.getItem('buses') || '[]').forEach(b => {
+      const opt = document.createElement('option');
+      opt.text = b; opt.value = b;
+      busSel.add(opt);
+    });
+
+    JSON.parse(localStorage.getItem('routes') || '[]').forEach(r => {
+      const opt = document.createElement('option');
+      opt.text = r.name; opt.value = r.name;
+      routeSel.add(opt);
+    });
+
+    renderChecklist();
+  }
+
+  function renderChecklist() {
+    const checklist = JSON.parse(localStorage.getItem('inspectionChecklist') || '[]');
+    const area = document.getElementById('checklistArea');
+    area.innerHTML = checklist.map(task => \`<label><input type="checkbox"> \${task}</label><br>\`).join('');
+  }
+
+  function startTrip() {
+    startTime = new Date();
+    document.getElementById('tripInfo').innerText = "Trip started at: " + startTime.toLocaleTimeString();
+  }
+
+  function endTrip() {
+    if (!startTime) return alert('Trip not started.');
+    const endTime = new Date();
+    const elapsed = Math.round((endTime - startTime) / 60000); // in minutes
+    document.getElementById('tripInfo').innerText += "\nTrip ended at: " + endTime.toLocaleTimeString() + " (Elapsed: " + elapsed + " min)";
+  }
+</script>
+
+</body>
+</html>
